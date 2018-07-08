@@ -11,7 +11,7 @@
  **          插入节点时，平衡因子趋向于0,则该子树树高不变
  **                    平衡因子远离0,则该子树树高增加或减少
                        当旋转时，旋转后树高比旋转前树高少1层
-                               而跟不插入节点时的高度应该是一样的
+                               而跟不插入节点时的高度是一样的
  **************************************************/
 #include <iostream>
 #include <stack>
@@ -100,6 +100,7 @@ void AVL<Key>::insert(Key key)
                 // 右右
                 p = leftRotate(p);
             }
+            // 根节点变更
             if (p->parent)
                 if (dirent) p->parent->left = p;
                 else        p->parent->right = p;
@@ -119,6 +120,8 @@ void AVL<Key>::insert(Key key)
                 // 左右
                 p = rightLeftRotate(p);
             }
+
+            // 根节点变更
             if (p->parent)
                 if (dirent) p->parent->left = p;
                 else p->parent->right = p;
