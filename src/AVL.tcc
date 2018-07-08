@@ -130,7 +130,195 @@ void AVL<Key>::insert(Key key)
             return;
 
         default:
-            assert(!"bf value error!");
+            assert(!"[insert] bf value error!");
+        }
+
+        p = p->parent;
+    }
+}
+
+template <class Key>
+void AVL<Key>::del(Key key)
+{
+    bool isfound = false;
+
+    Node *p = root;
+    // 被删节点的父节点(也是向上平衡时的开始节点)
+    Node *bedel = NULL;
+    Node **temp;
+    // 方向，左true，右false
+    bool dirent;
+
+    if (!root)
+        return;
+
+    // 查找删除的地方
+    while (p) {
+        if (key > p->key) {
+            bedel = p;
+            dirent = false;
+            p = p->right;
+        } else if (key < p->key) {
+            bedel = p;
+            dirent = true;
+            p = p->left;
+        } else {
+            p->key = key;
+            isfound = true;
+            break;
+        }
+    }
+
+    if (!isfound)
+        return;
+
+    /**
+     * 找到节点，分三种情况来分析
+     * 1. 该节点无孩子
+     * 2. 该节点一个孩子
+     * 3. 该节点两个孩子，删除后，找孩子进行替代
+     */
+    temp = (bedel)
+        ? (dirent) ? &bedel->left : &bedel->right
+        : &root;
+    if (p->left == NULL || p->right == NULL) {
+        // 都为空，或者其中一个为空
+        if (p->left == NULL) {
+            *temp = p->right;
+        } else if (p->right == NULL) {
+            *temp = p->left;
+        }
+        if (*temp)
+            (*temp)->parent = bedel;
+        delete p;
+    } else {
+        /**
+         * 两个孩子
+         */
+        Node *max;
+
+        max = p->left;
+        while (max->right) {
+            max = max->right;
+        }
+        // 替换
+        p->key = max->key;
+        if (max == p->left) {
+            max->parent->left = max->left;
+            dirent = true;
+        } else {
+            max->parent->right = max->left;
+            dirent = false;
+        }
+        if (max->left)
+            max->left->parent = max->parent;
+
+        bedel = max->parent;
+        delete max;
+    }
+
+    // 开始向上平衡
+    p = bedel;
+    while (p) {
+
+        /**
+         * 删除时，
+         * 树高没变的情况下，平衡值在[-1,1]间，树都是平衡的，不必再次回溯
+         */
+        p->bf += (dirent) ? -1 : 1;
+
+        // 判定树高没变
+        // if (p->bf == 0 || p->bf == 1 || p->bf == -1)
+        //     return;
+
+        // 判断当前节点是其父节点的那个孩子
+        if (p->parent) {
+            dirent = (p == p->parent->left) ? true : false;
+        }
+
+        switch (p->bf) {
+        case 0:
+            // 树高变了
+            // 因子从-1或1到0
+            break;
+        case -1:
+        case 1:
+            // 树高没变，平衡值在-1,1之间，停止回溯
+            // 因子从0到-1或1
+            return;
+
+        case -2:
+            // 右
+            assert(p->right);
+            // assert(p->right->bf != 0);
+
+            if (p->right->bf == 1) {
+                // 右左(树高变化)
+                p = leftRightRotate(p);
+            } else if (p->right->bf == -1) {
+                // 右右(树高变化)
+                p = leftRotate(p);
+            } else {
+                // 删除时，比增加多一种情况
+                // 这种情况下，树高不变，不再回溯
+                p = leftRotate(p);
+                p->bf = 1;
+                p->left->bf = -1;
+
+                // 根节点变更
+                // TODO: 代码重复，考虑怎么去掉
+                if (p->parent)
+                    if (dirent) p->parent->left = p;
+                    else        p->parent->right = p;
+                else
+                    root = p;
+                return;
+            }
+            // 根节点变更
+            if (p->parent)
+                if (dirent) p->parent->left = p;
+                else        p->parent->right = p;
+            else
+                root = p;
+            break;
+
+        case 2:
+            // 左
+            assert(p->left);
+            // assert(p->left->bf != 0);
+
+            if (p->left->bf == 1) {
+                // 左左(树高变化)
+                p = rightRotate(p);
+            } else if (p->left->bf == -1) {
+                // 左右(树高变化)
+                p = rightLeftRotate(p);
+            } else {
+                // 删除时，比增加多一种情况
+                // 这种情况下，树高不变，不再回溯
+                p = rightRotate(p);
+                p->bf = -1;
+                p->right->bf = 1;
+
+                // 根节点变更
+                if (p->parent)
+                    if (dirent) p->parent->left = p;
+                    else p->parent->right = p;
+                else
+                    root = p;
+                return;
+            }
+
+            // 根节点变更
+            if (p->parent)
+                if (dirent) p->parent->left = p;
+                else p->parent->right = p;
+            else
+                root = p;
+            break;
+
+        default:
+            assert(!"[del] bf value error");
         }
 
         p = p->parent;
